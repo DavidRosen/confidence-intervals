@@ -1,19 +1,47 @@
+# boot_conf_intervals_ml.py just concatenates the three gists referenced below
+
+# example usage: 
+# from boot_conf_intervals_ml import specificity_score, make_boot_df, raw_metric_samples, ci
+         
+# gist make_df_and_boot.py 
+# https://gist.github.com/DavidRosen/3aeedbd2ccb73e636e7eb22657373b2b
 import numpy as np
 import pandas as pd
 import re
-def data2dataframe(*data_args):
-    """Convert 1+ (often 2) args (1-d arrays or other iterables) to 1 df
-    """
-    return pd.DataFrame\
-    ( { arg.name if hasattr(arg,'name') else str(i) : np.array(arg)
-          for i,arg in enumerate(data_args) 
-      }# end of dict comprehen.; np.array() removes index
-    ) 
 def make_boot_df(dforig):
     """Returns one boot sample dataframe, same shape as dforig
     """
     return dforig.sample(frac=1,replace=True).reset_index(drop=True)
 
+# gist raw_metric_samples.py https://gist.github.com/DavidRosen/4c80d1e295c39c089a62630fef878e26
+def raw_metric_samples(metrics, *data_args, nboots=10, sort=False,
+       **metric_kwargs):
+    """Return dataframe containing metric(s) for nboots boot sample datasets.
+    metrics is a metric func or iterable of funcs e.g. [m1, m2, m3]
+    """
+    if callable(metrics): metrics=[metrics] # single metric func to list
+    metrics=list(metrics) # in case it is a generator
+    dforig=pd.DataFrame\
+    ( { arg.name if hasattr(arg,'name') else str(i) : np.array(arg)
+          for i,arg in enumerate(data_args) 
+      }# end of dict comprehen.; np.array() removes index
+    ) # I like ( ) to be above one another
+    res=pd.DataFrame\
+    ( # dictionary comprehension:
+      { b:[ m( *[col_as_arg for (colname,col_as_arg) in dfboot.items()],
+               **_kws_this_metric(m,**metric_kwargs)
+             ) for m in metrics # list comprehension ends w/following "]":
+          ] for b,dfboot in # generator expr. avoids huge mem. of *list* of df's:
+            ((b,make_boot_df(dforig)) for b in range(nboots))
+            if dfboot.iloc[:,0].nunique()>1 # >1 for log loss (no labels), roc
+      }, index=[_metric_name(m) for m in metrics]
+    ) # sorry but I like ( ) to be above #one #another:-)
+    res.index.name="Metric (class 1 +ve)"
+    return res.apply(lambda row: np.sort(row), axis=1) if sort else res
+from sklearn import metrics
+def specificity_score(true,pred, **kwargs):
+    return metrics.recall_score(1-pd.Series(true), 1-pd.Series(pred), **kwargs)
+specificity_score.__name__ = "Specificity (Recall of -ve)"
 def _kws_this_metric(m,**metric_kwargs):
     # dict of just those metric_kwargs that this metric accepts
     return \
@@ -26,27 +54,9 @@ def _kws_this_metric(m,**metric_kwargs):
 def _metric_name(m):
     name=re.sub(' score$','',m.__name__.replace('_',' '))
     return name.title() if name.lower()==name else name
-def raw_metric_samples(metrics, *data_args, nboots=10, sort=False,
-       **metric_kwargs): # non-std exprsn fmt: "( " (note space) above ")"
-    """Return dataframe containing metric(s) for nboots boot sample datasets.
-    metrics is a metric func or iterable of funcs e.g. [m1, m2, m3]
-    """
-    if callable(metrics): metrics=[metrics] # single metric func to list
-    metrics=list(metrics) # in case it is a generator
-    dforig=data2dataframe(*data_args)
-    res=pd.DataFrame\
-    ( # dictionary comprehension:
-      { b:[ m( *[col_as_arg for (colname,col_as_arg) in dfboot.items()],
-               **_kws_this_metric(m,**metric_kwargs)
-             ) for m in metrics # list comprehension ends w/following "]":
-          ] for b,dfboot in # generator expr. avoids huge mem. of *list* of df's:
-            ((b,make_boot_df(dforig)) for b in range(nboots))
-            if dfboot.iloc[:,0].nunique()>1 # >1 for log loss (no labels), roc
-      }, index=[_metric_name(m) for m in metrics]
-    )
-    res.index.name="Metric (class 1 +ve)"
-    return res.apply(lambda row: np.sort(row), axis=1) if sort else res
 
+# gist ci.py 
+# https://gist.github.com/DavidRosen/c85a2d075f64e0c9fd02e5bfbc968eb0
 DFLT_NBOOTS=500
 def ci(metrics, *data_args, quantiles=[0.025,0.975], 
            nboots=DFLT_NBOOTS, **metric_kwargs):
