@@ -14,6 +14,7 @@ def make_boot_df(dforig):
     return dforig.sample(frac=1,replace=True).reset_index(drop=True)
 
 # gist raw_metric_samples.py https://gist.github.com/DavidRosen/4c80d1e295c39c089a62630fef878e26
+from tqdm import tqdm
 def raw_metric_samples(metrics, *data_args, nboots=10, sort=False,
        **metric_kwargs):
     """Return dataframe containing metric(s) for nboots boot sample datasets.
@@ -32,7 +33,7 @@ def raw_metric_samples(metrics, *data_args, nboots=10, sort=False,
                **_kws_this_metric(m,**metric_kwargs)
              ) for m in metrics # list comprehension ends w/following "]":
           ] for b,dfboot in # generator expr. avoids huge mem. of *list* of df's:
-            ((b,make_boot_df(dforig)) for b in range(nboots))
+            ((b,make_boot_df(dforig)) for b in tqdm(range(nboots)))
             if dfboot.iloc[:,0].nunique()>1 # >1 for log loss (no labels), roc
       }, index=[_metric_name(m) for m in metrics]
     ) # sorry but I like ( ) to be above #one #another:-)
