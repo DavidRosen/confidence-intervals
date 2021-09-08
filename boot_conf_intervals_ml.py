@@ -43,7 +43,7 @@ def raw_metric_samples(metrics, *data_args, nboots=DFLT_NBOOTS, sort=False,
 from sklearn import metrics
 def specificity_score(true,pred, **kwargs):
     return metrics.recall_score(1-pd.Series(true), 1-pd.Series(pred), **kwargs)
-specificity_score.__name__ = "Specificity (Recall of -ve)"
+specificity_score.__name__ = "Specificity (Recall of −ve)"
 def _kws_this_metric(m,**metric_kwargs):
     # dict of just those metric_kwargs that this metric accepts
     return \
