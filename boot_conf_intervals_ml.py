@@ -14,8 +14,9 @@ def make_boot_df(dforig):
     return dforig.sample(frac=1,replace=True).reset_index(drop=True)
 
 # gist raw_metric_samples.py https://gist.github.com/DavidRosen/4c80d1e295c39c089a62630fef878e26
-from tqdm import tqdm
-def raw_metric_samples(metrics, *data_args, nboots=10, sort=False,
+from tqdm import trange
+DFLT_NBOOTS=500
+def raw_metric_samples(metrics, *data_args, nboots=DFLT_NBOOTS, sort=False,
        **metric_kwargs):
     """Return dataframe containing metric(s) for nboots boot sample datasets.
     metrics is a metric func or iterable of funcs e.g. [m1, m2, m3]
@@ -33,7 +34,7 @@ def raw_metric_samples(metrics, *data_args, nboots=10, sort=False,
                **_kws_this_metric(m,**metric_kwargs)
              ) for m in metrics # list comprehension ends w/following "]":
           ] for b,dfboot in # generator expr. avoids huge mem. of *list* of df's:
-            ((b,make_boot_df(dforig)) for b in tqdm(range(nboots)))
+            ((b,make_boot_df(dforig)) for b in trange(nboots))
             if dfboot.iloc[:,0].nunique()>1 # >1 for log loss (no labels), roc
       }, index=[_metric_name(m) for m in metrics]
     ) # sorry but I like ( ) to be above #one #another:-)
@@ -58,7 +59,6 @@ def _metric_name(m):
 
 # gist ci.py 
 # https://gist.github.com/DavidRosen/c85a2d075f64e0c9fd02e5bfbc968eb0
-DFLT_NBOOTS=500
 def ci(metrics, *data_args, quantiles=[0.025,0.975], 
            nboots=DFLT_NBOOTS, **metric_kwargs):
     """Return Pandas data frame of bootstrap confidence intervals. 
@@ -70,7 +70,7 @@ def ci(metrics, *data_args, quantiles=[0.025,0.975],
     metric_kwargs : each metric gets any KW's it accepts optionally
     """ # non-std expr fmt: ( ) above one another unless same line
     if callable(metrics): metrics=[metrics] # single metric func to list
-    metrics=list(metrics) # in case it is a generator
+    metrics=list(metrics) # in case it is a generator [expr]
     result=raw_metric_samples\
       (metrics, *data_args, nboots=nboots, sort=False, **metric_kwargs)
     resboots=result.shape[1]
