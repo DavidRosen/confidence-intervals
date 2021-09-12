@@ -1,9 +1,12 @@
 # boot_conf_intervals_ml.py just concatenates the gists referenced below
 
-# example usage: 
-# from boot_conf_intervals_ml import data_args_to_df, make_boot_df, \
-#     specificity_score, metrics_from_df, metrics_from_data_args, \
-#     raw_metric_samples, metric_boot_histogram, ci
+# Example usage: 
+# from boot_conf_intervals_ml import ci # enough to calc conf intervals
+#
+# But for more detailed usage like in the article, you might want:
+# from boot_conf_intervals_ml import ci, data_args_to_df, make_boot_df \
+#    , specificity_score, raw_metric_samples, metric_boot_histogram \
+#    #don't need:#     , metrics_from_df, metrics_from_data_args
          
 # https://gist.github.com/DavidRosen/356fd5bc7fe74d444c9e971680fadd5e
 import numpy as np
