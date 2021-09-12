@@ -71,6 +71,7 @@ def raw_metric_samples(metrics, *data_args, nboots=DFLT_NBOOTS, sort=False,
     return res.apply(lambda row: np.sort(row), axis=1) if sort else res
 
 # https://gist.github.com/DavidRosen/74c35f12ead6a984649f7d6efb9895d2
+import matplotlib, matplotlib.ticker as mtick
 DFLT_QUANTILES=[0.025,0.975]
 def metric_boot_histogram( metric, *data_args, quantiles=DFLT_QUANTILES, 
                            nboots=DFLT_NBOOTS, **metric_kwargs
@@ -78,12 +79,10 @@ def metric_boot_histogram( metric, *data_args, quantiles=DFLT_QUANTILES,
     point = metric(*data_args, **metric_kwargs)
     data = raw_metric_samples(metric, *data_args, **metric_kwargs).transpose()
     (lower, upper) = data.quantile(quantiles).iloc[:,0]
-
-    import matplotlib, matplotlib.ticker as mtick
     import seaborn; seaborn.set_style('whitegrid')  #optional
     matplotlib.rcParams["figure.dpi"] = 300
     ax = data.hist(bins=50, figsize=(5, 2), alpha=0.4)[0][0]
-    ax.xaxis.set_major_formatter( mtick.PercentFormatter(1.0))
+    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
     for x in lower, point, upper:
         ax.plot([x, x],[0, 30], lw=2.5)
 
